@@ -4,11 +4,15 @@ import { buildStatusReport, suggestCommitMessage } from "../core/report.js";
 import { countDecisions, deriveStatus } from "../core/status.js";
 import { SCHEMA_VERSION } from "../core/schema.js";
 
-export function apiRouter(store: ReviewStore): Router {
+export function apiRouter(
+  store: ReviewStore,
+  opts: { readOnly?: boolean } = {},
+): Router {
   const r = Router();
+  const readOnly = opts.readOnly ?? false;
 
   r.get("/health", (_req, res) => {
-    res.json({ ok: true, schemaVersion: SCHEMA_VERSION });
+    res.json({ ok: true, schemaVersion: SCHEMA_VERSION, readOnly });
   });
 
   // Chooser list.
@@ -37,6 +41,7 @@ export function apiRouter(store: ReviewStore): Router {
       counts: countDecisions(manifest),
       stale: liveHead !== null && liveHead !== manifest.pr.headSha,
       liveHeadSha: liveHead,
+      readOnly,
     });
   });
 
@@ -59,6 +64,12 @@ export function apiRouter(store: ReviewStore): Router {
 
   // Record an accept/reject decision.
   r.post("/reviews/:slug/decisions", async (req, res) => {
+    if (readOnly) {
+      return res.status(423).json({
+        error:
+          "This prwalk server is read-only because another server instance owns writes for this repo. Stop the other server, or use it to record decisions.",
+      });
+    }
     const { stableId, revisionId, action, feedback } = req.body ?? {};
     if (!stableId || !revisionId || (action !== "accept" && action !== "reject")) {
       return res.status(400).json({ error: "stableId, revisionId, action(accept|reject) required" });

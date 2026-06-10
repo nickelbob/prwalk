@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -44,9 +45,40 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-export function DiffView({ patch, language }: { patch: string; language: string }) {
+/**
+ * Render a unified diff with syntax highlighting. Diffs longer than
+ * `collapseOver` lines are collapsed behind a toggle so very large reviews
+ * keep the DOM light and stay responsive (a lightweight stand-in for full list
+ * virtualization).
+ */
+export function DiffView({
+  patch,
+  language,
+  collapseOver = 80,
+}: {
+  patch: string;
+  language: string;
+  collapseOver?: number;
+}) {
   const lines = patch.replace(/\n$/, "").split("\n");
+  const [open, setOpen] = useState(lines.length <= collapseOver);
+
+  if (!open) {
+    return (
+      <button className="diff-collapsed" onClick={() => setOpen(true)}>
+        Show diff — {lines.length} lines (+{lines.filter((l) => l.startsWith("+")).length} / -
+        {lines.filter((l) => l.startsWith("-")).length})
+      </button>
+    );
+  }
+
   return (
+    <>
+    {lines.length > collapseOver && (
+      <button className="diff-hide" onClick={() => setOpen(false)}>
+        Hide diff
+      </button>
+    )}
     <pre className="diff">
       {lines.map((line, i) => {
         let cls = "ctx";
@@ -68,5 +100,6 @@ export function DiffView({ patch, language }: { patch: string; language: string 
         );
       })}
     </pre>
+    </>
   );
 }

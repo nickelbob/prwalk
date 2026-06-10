@@ -13,6 +13,8 @@ export interface ServeOptions {
   autoPort?: boolean;
   /** Dev mode: API only (Vite serves the client separately) + permissive CORS. */
   dev?: boolean;
+  /** Read-only: another server owns writes; decisions are refused. */
+  readOnly?: boolean;
 }
 
 export interface ServeHandle {
@@ -36,7 +38,7 @@ export async function startServer(opts: ServeOptions): Promise<ServeHandle> {
   }
 
   const store = new ReviewStore(opts.repoRoot);
-  app.use("/api", apiRouter(store));
+  app.use("/api", apiRouter(store, { readOnly: opts.readOnly ?? false }));
 
   const clientDir = opts.dev ? null : resolveClientDir();
   if (clientDir) {

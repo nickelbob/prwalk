@@ -16,3 +16,8 @@ export function manifestPath(repoRoot: string, branch: string): string {
 export function lockPath(repoRoot: string, branch: string): string {
   return join(prwalkDir(repoRoot), `${branchToSlug(branch)}.lock`);
 }
+
+/** Lock file for the single server instance that owns writes to this repo. */
+export function serveLockPath(repoRoot: string): string {
+  return join(prwalkDir(repoRoot), ".serve.lock");
+}

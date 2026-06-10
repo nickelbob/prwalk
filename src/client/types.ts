@@ -95,6 +95,7 @@ export interface ReviewResponse {
   counts: StatusCounts;
   stale: boolean;
   liveHeadSha: string | null;
+  readOnly: boolean;
 }
 
 export interface DecisionResponse {

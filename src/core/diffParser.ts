@@ -157,3 +157,77 @@ export function parseDiff(diffText: string): ParsedFile[] {
   flushFile();
   return files;
 }
+
+/**
+ * Split one hunk into multiple valid sub-hunks of at most ~maxLines body lines
+ * each, cutting only at context-line boundaries so each sub-hunk has leading
+ * context and the old/new line accounting stays exact. Returns the hunk
+ * unchanged (in a single-element array) when it is already small enough.
+ */
+export function splitHunk(hunk: ParsedHunk, maxLines: number): ParsedHunk[] {
+  const body = hunk.patch.split("\n");
+  // First line is the @@ header; drop a trailing empty entry from the split.
+  const lines = body.slice(1).filter((l, i) => !(i === body.length - 2 && l === ""));
+  if (lines.length <= maxLines) return [hunk];
+
+  const result: ParsedHunk[] = [];
+  let oldLine = hunk.oldStart;
+  let newLine = hunk.newStart;
+
+  let winLines: string[] = [];
+  let winOldStart = oldLine;
+  let winNewStart = newLine;
+  let winOld = 0;
+  let winNew = 0;
+  let winAdded = 0;
+  let winRemoved = 0;
+
+  const flush = () => {
+    if (winLines.length === 0) return;
+    const header = `@@ -${winOldStart},${winOld} +${winNewStart},${winNew} @@${hunk.section ? " " + hunk.section : ""}`;
+    result.push({
+      header,
+      oldStart: winOldStart,
+      oldLines: winOld,
+      newStart: winNewStart,
+      newLines: winNew,
+      section: hunk.section,
+      patch: header + "\n" + winLines.join("\n") + "\n",
+      addedLines: winAdded,
+      removedLines: winRemoved,
+    });
+    winLines = [];
+    winOld = 0;
+    winNew = 0;
+    winAdded = 0;
+    winRemoved = 0;
+  };
+
+  for (const line of lines) {
+    const isContext = line.startsWith(" ") || line === "";
+    // Cut before a context line once the window is large enough, so the next
+    // sub-hunk starts with context.
+    if (winLines.length >= maxLines && isContext) {
+      flush();
+      winOldStart = oldLine;
+      winNewStart = newLine;
+    }
+    winLines.push(line);
+    if (line.startsWith("+")) {
+      winNew++;
+      newLine++;
+      winAdded++;
+    } else if (line.startsWith("-")) {
+      winOld++;
+      oldLine++;
+      winRemoved++;
+    } else {
+      winOld++;
+      winNew++;
+      oldLine++;
+      newLine++;
+    }
+  }
+  flush();
+  return result;
+}

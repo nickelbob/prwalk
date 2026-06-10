@@ -1,5 +1,6 @@
 import { repoRoot } from "../../core/git.js";
 import { branchToSlug } from "../../core/paths.js";
+import { acquireServerLock } from "../../core/lock.js";
 import { startServer } from "../../server/index.js";
 
 export interface ServeOpts {
@@ -18,11 +19,16 @@ export async function cmdServe(
   const explicitPort = opts.port !== undefined;
   const port = opts.port ?? 7777;
 
+  // Single-writer lock: if another server already owns this repo, run read-only.
+  const lock = acquireServerLock(root, port);
+  const readOnly = !lock.acquired;
+
   const handle = await startServer({
     repoRoot: root,
     port,
     autoPort: !explicitPort,
     dev: opts.dev,
+    readOnly,
   });
 
   // Resolve the deep-link slug if a branch was given (accepts branch or slug).
@@ -32,11 +38,16 @@ export async function cmdServe(
 
   if (opts.json) {
     process.stdout.write(
-      JSON.stringify({ url: handle.url, reviewUrl, port: handle.port, slug }) + "\n",
+      JSON.stringify({ url: handle.url, reviewUrl, port: handle.port, slug, readOnly }) + "\n",
     );
   } else {
     process.stdout.write(`prwalk serving at ${handle.url}\n`);
     process.stdout.write(`  -> review link: ${reviewUrl}\n`);
+    if (readOnly) {
+      process.stdout.write(
+        `  ! read-only: another prwalk server (pid ${lock.holder?.pid}, port ${lock.holder?.port}) owns writes for this repo; decisions are disabled here.\n`,
+      );
+    }
     process.stdout.write(`  (Ctrl-C to stop)\n`);
   }
 

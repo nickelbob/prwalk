@@ -77,6 +77,7 @@ function Review({ slug, onBack }: { slug: string; onBack: () => void }) {
   };
 
   const decide = async (chunk: Chunk, action: "accept" | "reject", feedback?: string) => {
+    if (data?.readOnly) return;
     const prevChunk = chunk;
     setBusy((b) => new Set(b).add(chunk.stableId));
     // Optimistic update.
@@ -121,10 +122,17 @@ function Review({ slug, onBack }: { slug: string; onBack: () => void }) {
         stale={data.stale}
         slug={slug}
       />
+      {data.readOnly && (
+        <div className="readonly-banner">
+          Read-only: another prwalk server owns writes for this repo. Stop it (or
+          use it) to record decisions here.
+        </div>
+      )}
       <ReviewView
         manifest={data.manifest}
         slug={slug}
         busy={busy}
+        readOnly={data.readOnly}
         onAccept={(c) => decide(c, "accept")}
         onReject={(c, fb) => decide(c, "reject", fb)}
       />

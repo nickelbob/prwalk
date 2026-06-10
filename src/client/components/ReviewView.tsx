@@ -43,12 +43,14 @@ export function ReviewView({
   manifest,
   slug,
   busy,
+  readOnly,
   onAccept,
   onReject,
 }: {
   manifest: Manifest;
   slug: string;
   busy: Set<string>;
+  readOnly: boolean;
   onAccept: (c: Chunk) => void;
   onReject: (c: Chunk, feedback: string) => void;
 }) {
@@ -80,14 +82,14 @@ export function ReviewView({
       } else if (e.key === "k") {
         const prev = flowChunks[Math.max(idx - 1, 0)];
         if (prev) { setActiveId(prev.stableId); scrollTo(prev.stableId); }
-      } else if (e.key === "a" && activeId) {
+      } else if (e.key === "a" && activeId && !readOnly) {
         const c = flowChunks[idx];
         if (c) onAccept(c);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [flowChunks, activeId, onAccept]);
+  }, [flowChunks, activeId, onAccept, readOnly]);
 
   const toggleExpand = (key: string) => {
     setExpanded((prev) => {
@@ -104,6 +106,7 @@ export function ReviewView({
       slug={slug}
       active={c.stableId === activeId}
       busy={busy.has(c.stableId)}
+      readOnly={readOnly}
       onAccept={() => onAccept(c)}
       onReject={(fb) => onReject(c, fb)}
       onActivate={() => setActiveId(c.stableId)}

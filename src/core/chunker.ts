@@ -1,4 +1,5 @@
 import type { ParsedFile, ParsedHunk } from "./diffParser.js";
+import { splitHunk } from "./diffParser.js";
 import { makeAnchor, type CandidateChunk } from "./identity.js";
 
 /**
@@ -48,28 +49,12 @@ export function inferLanguage(path: string): string {
 }
 
 export interface ChunkerOptions {
-  /** Hunks longer than this are truncated in the rendered patch. */
+  /** Hunks longer than this many body lines are split into sub-chunks. */
   maxHunkLines?: number;
 }
 
-function truncatePatch(patch: string, maxLines: number): { patch: string; truncated: boolean } {
-  const lines = patch.split("\n");
-  if (lines.length <= maxLines) return { patch, truncated: false };
-  const head = lines.slice(0, Math.floor(maxLines * 0.7));
-  const tail = lines.slice(lines.length - Math.floor(maxLines * 0.2));
-  return {
-    patch: [...head, `... (${lines.length - head.length - tail.length} lines truncated) ...`, ...tail].join("\n"),
-    truncated: true,
-  };
-}
-
-function hunkToCandidate(
-  file: ParsedFile,
-  hunk: ParsedHunk,
-  maxHunkLines: number,
-): CandidateChunk {
+function hunkToCandidate(file: ParsedFile, hunk: ParsedHunk): CandidateChunk {
   const path = file.newPath ?? file.oldPath ?? "unknown";
-  const { patch, truncated } = truncatePatch(hunk.patch, maxHunkLines);
   return {
     file: path,
     previousFile: file.changeType === "rename" ? file.oldPath : null,
@@ -79,10 +64,10 @@ function hunkToCandidate(
     diff: {
       format: "unified",
       hunkHeader: hunk.header,
-      patch,
+      patch: hunk.patch,
       addedLines: hunk.addedLines,
       removedLines: hunk.removedLines,
-      truncated,
+      truncated: false,
     },
   };
 }
@@ -131,7 +116,7 @@ export function chunkFiles(
   files: ParsedFile[],
   opts: ChunkerOptions = {},
 ): CandidateChunk[] {
-  const maxHunkLines = opts.maxHunkLines ?? 400;
+  const maxHunkLines = opts.maxHunkLines ?? 300;
   const candidates: CandidateChunk[] = [];
   for (const file of files) {
     if (file.hunks.length === 0) {
@@ -139,7 +124,11 @@ export function chunkFiles(
       continue;
     }
     for (const hunk of file.hunks) {
-      candidates.push(hunkToCandidate(file, hunk, maxHunkLines));
+      // Large hunks are split into multiple reviewable sub-chunks rather than
+      // truncated, so nothing is hidden from the reviewer.
+      for (const sub of splitHunk(hunk, maxHunkLines)) {
+        candidates.push(hunkToCandidate(file, sub));
+      }
     }
   }
   return candidates;

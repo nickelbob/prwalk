@@ -8,6 +8,7 @@ export interface ChunkCardProps {
   slug: string;
   active: boolean;
   busy: boolean;
+  readOnly: boolean;
   onAccept: () => void;
   onReject: (feedback: string) => void;
   onActivate: () => void;
@@ -15,7 +16,7 @@ export interface ChunkCardProps {
 }
 
 export function ChunkCard(props: ChunkCardProps) {
-  const { chunk, active, busy } = props;
+  const { chunk, active, busy, readOnly } = props;
   const [rejecting, setRejecting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [feedback, setFeedback] = useState(chunk.decision.feedback ?? "");
@@ -102,18 +103,19 @@ export function ChunkCard(props: ChunkCardProps) {
         <div className="chunk-actions" onClick={(e) => e.stopPropagation()}>
           <button
             className="btn accept"
-            disabled={busy}
+            disabled={busy || readOnly}
             onClick={props.onAccept}
           >
             {state === "accepted" ? "Accepted ✓" : "Accept"}
           </button>
           <button
             className="btn reject"
-            disabled={busy}
+            disabled={busy || readOnly}
             onClick={() => setRejecting(true)}
           >
             {state === "rejected" ? "Edit rejection" : "Reject…"}
           </button>
+          {readOnly && <span className="hint">read-only</span>}
         </div>
       )}
     </div>

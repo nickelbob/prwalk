@@ -151,6 +151,19 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   background: rgba(248,81,73,0.1); border-left: 3px solid var(--del-fg); border-radius: 4px;
 }
 
+/* ---- Collapsible diffs (M5c) ---- */
+.diff-collapsed, .diff-hide {
+  display: inline-block; margin: 0.6rem 0.85rem 0; padding: 0.35rem 0.7rem;
+  background: var(--panel-2); border: 1px dashed var(--border); border-radius: 6px;
+  color: var(--muted); cursor: pointer; font-size: 0.8rem;
+}
+.diff-hide { margin-bottom: 0.3rem; }
+
+.readonly-banner {
+  background: rgba(158,106,3,0.18); border: 1px solid var(--pending);
+  color: #e3b341; padding: 0.6rem 0.85rem; border-radius: 8px; margin-bottom: 1rem;
+}
+
 /* ---- History ---- */
 .hist-toggle {
   background: none; border: 1px solid var(--border); border-radius: 4px;
