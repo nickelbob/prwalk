@@ -8,6 +8,9 @@ import { applyDecision, type DecisionInput } from "../core/decisions.js";
 import { applyReviewLevel } from "../core/reviewLevel.js";
 import type { Manifest } from "../core/schema.js";
 
+/** `.prwalk/*.json` files that are NOT review manifests. */
+const RESERVED_SLUGS = new Set(["config"]);
+
 /**
  * Owns all manifest reads/writes while the server runs. Reviews are addressed
  * by branch slug (the `.prwalk/<slug>.json` stem) so URLs never contain a
@@ -26,16 +29,23 @@ export class ReviewStore {
   async list(): Promise<{ slug: string; manifest: Manifest }[]> {
     const dir = prwalkDir(this.repoRoot);
     if (!existsSync(dir)) return [];
-    const files = (await readdir(dir)).filter((f) => f.endsWith(".json"));
+    const files = (await readdir(dir)).filter(
+      (f) => f.endsWith(".json") && !RESERVED_SLUGS.has(basename(f, ".json")),
+    );
     const out: { slug: string; manifest: Manifest }[] = [];
     for (const f of files) {
-      const manifest = await loadManifest(join(dir, f));
-      if (manifest) out.push({ slug: basename(f, ".json"), manifest });
+      try {
+        const manifest = await loadManifest(join(dir, f));
+        if (manifest) out.push({ slug: basename(f, ".json"), manifest });
+      } catch {
+        // A stray/invalid .json in .prwalk/ shouldn't break listing real reviews.
+      }
     }
     return out.sort((a, b) => a.manifest.pr.branch.localeCompare(b.manifest.pr.branch));
   }
 
   async load(slug: string): Promise<Manifest | null> {
+    if (RESERVED_SLUGS.has(slug)) return null;
     return loadManifest(this.pathForSlug(slug));
   }
 

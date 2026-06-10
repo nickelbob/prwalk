@@ -6,6 +6,8 @@ import { cmdServe } from "./commands/serve.js";
 import { cmdStatus } from "./commands/status.js";
 import { cmdList } from "./commands/list.js";
 import { cmdCommitMsg } from "./commands/commitMsg.js";
+import { cmdSync } from "./commands/sync.js";
+import { cmdReview } from "./commands/review.js";
 
 async function requireRepo(): Promise<string> {
   const cwd = process.cwd();
@@ -28,6 +30,7 @@ program
   .requiredOption("--base <ref>", "base ref to diff against (e.g. main)")
   .option("--branch <name>", "branch to review (default: current branch)")
   .option("--title <title>", "PR title")
+  .option("--issue <key>", "tracker issue key (default: extracted from branch)")
   .option("--max-hunk-lines <n>", "truncate hunks longer than this", (v) => parseInt(v, 10))
   .option("--json", "machine-readable output")
   .action(async (opts) => {
@@ -65,6 +68,30 @@ program
   .action(async (opts) => {
     const cwd = await requireRepo();
     await cmdList(cwd, opts);
+  });
+
+program
+  .command("sync")
+  .description("Emit the tracker SyncPlan (transition + comment + assignee) for the review")
+  .argument("[branch]", "branch (default: current branch)")
+  .option("--json", "machine-readable output")
+  .option("--execute", "execute via the native JIRA client (not yet implemented)")
+  .action(async (branch, opts) => {
+    const cwd = await requireRepo();
+    await cmdSync(cwd, branch, opts);
+  });
+
+program
+  .command("review")
+  .description("Reviewer entry: fetch the branch for an issue and serve the review locally")
+  .argument("<issue>", "tracker issue key (e.g. PROJ-123)")
+  .option("--branch <name>", "review this branch directly (skip issue lookup)")
+  .option("--remote <name>", "git remote to fetch from (default: from config or 'origin')")
+  .option("--port <n>", "port (default 7777)", (v) => parseInt(v, 10))
+  .option("--open", "open the browser")
+  .action(async (issue, opts) => {
+    const cwd = await requireRepo();
+    await cmdReview(cwd, issue, opts);
   });
 
 program

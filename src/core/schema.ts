@@ -126,6 +126,11 @@ export const PrMeta = z.object({
   /** Minimum risk the reviewer chooses to review one-at-a-time; null until set.
    * Chunks below this are auto-accepted. */
   reviewLevel: Risk.nullable().default(null),
+  /** Correlation to an external work tracker (JIRA). Derived from the branch
+   * name at create time (or an explicit --issue override); null when absent. */
+  issueKey: z.string().nullable().default(null),
+  issueUrl: z.string().nullable().default(null),
+  tracker: z.enum(["jira"]).nullable().default(null),
 });
 export type PrMeta = z.infer<typeof PrMeta>;
 

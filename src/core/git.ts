@@ -96,3 +96,30 @@ export async function add(cwd: string, path: string): Promise<void> {
 export async function repoRoot(cwd: string): Promise<string> {
   return (await git(cwd, ["rev-parse", "--show-toplevel"])).trim();
 }
+
+/** Fetch refs from a remote (prunes deleted remote branches). */
+export async function fetch(cwd: string, remote: string): Promise<void> {
+  await git(cwd, ["fetch", "--prune", remote]);
+}
+
+/** Local short branch names plus remote-tracking branch names for `remote`. */
+export async function listRemoteBranches(
+  cwd: string,
+  remote: string,
+): Promise<string[]> {
+  const out = await git(cwd, [
+    "for-each-ref",
+    "--format=%(refname:short)",
+    `refs/remotes/${remote}`,
+    "refs/heads",
+  ]);
+  return out
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.endsWith("/HEAD"));
+}
+
+/** Check out a branch (creating a tracking branch from the remote if needed). */
+export async function checkout(cwd: string, branch: string): Promise<void> {
+  await git(cwd, ["checkout", branch]);
+}

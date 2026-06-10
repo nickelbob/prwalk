@@ -16,6 +16,9 @@ export interface CreateMeta {
   baseSha: string;
   headSha: string;
   title?: string;
+  issueKey?: string | null;
+  issueUrl?: string | null;
+  tracker?: "jira" | null;
 }
 
 export interface MergeCounts {
@@ -108,6 +111,9 @@ export function buildInitialManifest(
       updatedAt: createdAt,
       currentRound: round,
       reviewLevel: null,
+      issueKey: meta.issueKey ?? null,
+      issueUrl: meta.issueUrl ?? null,
+      tracker: meta.tracker ?? null,
     },
     rounds: [
       { round, baseSha: meta.baseSha, headSha: meta.headSha, createdAt },
@@ -248,6 +254,10 @@ export function mergeRound(
       title: meta.title ?? existing.pr.title,
       updatedAt: createdAt,
       currentRound: round,
+      // Refresh correlation if this run resolved one; otherwise keep prior.
+      issueKey: meta.issueKey ?? existing.pr.issueKey,
+      issueUrl: meta.issueUrl ?? existing.pr.issueUrl,
+      tracker: meta.tracker ?? existing.pr.tracker,
     },
     rounds: [...existing.rounds, round_],
     chunks: resultChunks,

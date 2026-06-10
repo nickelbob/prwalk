@@ -61,6 +61,9 @@ export interface PrMeta {
   updatedAt: string;
   currentRound: number;
   reviewLevel: number | null;
+  issueKey: string | null;
+  issueUrl: string | null;
+  tracker: "jira" | null;
 }
 
 export interface AuditEvent {

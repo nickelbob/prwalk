@@ -26,18 +26,20 @@ npm link          # exposes the global `prwalk` command
 
 | Step | Who | Command |
 |------|-----|---------|
-| 1. Commit code on a branch | agent | `git commit …` |
+| 1. Commit code on a branch (`feat/PROJ-123-…`) | agent | `git commit …` |
 | 2. Build the review manifest | agent | `prwalk create --base main` |
 | 3. Annotate descriptions / sections / **risk 1–5** | agent | edit `.prwalk/<branch>.json` |
-| 4. Serve + send the link | agent | `prwalk serve` → `http://localhost:7777/r/<slug>` |
-| 5. Pick a review level, review in-scope chunks one-at-a-time | **you** | accept / reject in the browser |
-| 6. Read decisions back | agent | `prwalk status --json` |
-| 7. Revise rejected code, commit | agent | `git commit …` |
-| 8. Re-run create (round 2…) | agent | `prwalk create --base main` |
-| 9. Re-review only what changed | **you** | accepted-unchanged chunks stay accepted |
-| 10. Commit the audit log | **you** | `prwalk commit-msg` suggests a message |
+| 4. Push the branch + announce the review on the issue | agent | `git push` then `prwalk sync` |
+| 5. Open the review (fetches the branch, serves locally) | **you** | `prwalk review PROJ-123` |
+| 6. Pick a review level, review in-scope chunks one-at-a-time | **you** | accept / reject in the browser |
+| 7. Read decisions back | agent | `prwalk status --json` |
+| 8. Sync the outcome to the issue | agent | `prwalk sync --json` → execute via JIRA tools |
+| 9. Revise rejected code, commit, push | agent | `git commit … && git push` |
+| 10. Re-run create (round 2…) | agent | `prwalk create --base main` |
+| 11. Re-review only what changed | **you** | accepted-unchanged chunks stay accepted |
+| 12. Commit the audit log | **you** | `prwalk commit-msg` suggests a message |
 
-Repeat 5–9 until `prwalk status` reports **approved**.
+Repeat 6–11 until `prwalk status` reports **approved**.
 
 ## Risk-gated, one-at-a-time review
 
@@ -71,8 +73,59 @@ default is filled in but caps at 3 — genuinely risky changes must be elevated 
   link. Auto-increments the port on conflict unless `--port` is explicit.
 - `prwalk status [branch] [--json]`
   The agent's read path. `--json` returns `{status, counts, rejected[], pending[], stale, …}`.
+- `prwalk sync [branch] [--json]`
+  Emits the **SyncPlan** for the review's current state — the JIRA transition,
+  comment, and assignee that should follow. Prints it for the orchestrating
+  agent to execute via its own JIRA tools; `--json` for machine consumption.
+  (`--execute`, a built-in REST executor, is reserved/not yet implemented.)
+- `prwalk review <ISSUE-KEY> [--branch <name>] [--remote <name>] [--port N]`
+  The **reviewer's** entry point. Fetches the remote, resolves the branch
+  carrying that issue key (or `--branch`), checks it out, and serves the review
+  locally. The manifest embeds its diffs, so reviewing needs no build.
 - `prwalk list [--json]` — all reviews in the repo with status + counts.
 - `prwalk commit-msg [branch]` — prints (never runs) a suggested commit message.
+
+## JIRA + git integration
+
+prwalk hooks into a JIRA + git SDLC through four seams, with **git as the
+transport** (the committed manifest rides the branch) and **JIRA as the inbox +
+audit destination**. No hosted service, and prwalk never holds JIRA credentials.
+
+- **Correlate** — `prwalk create` extracts the issue key from the branch name
+  (`feat/PROJ-123-login` → `PROJ-123`, regex configurable) or takes `--issue
+  PROJ-123`, and records `pr.issueKey` / `pr.issueUrl` in the manifest.
+- **Deliver** — the reviewer runs `prwalk review PROJ-123`; it fetches and
+  serves the branch's committed review locally. Each reviewer hosts their own.
+- **Sync back** — `prwalk sync` computes a pure **SyncPlan** (status →
+  transition + comment + assignee). The orchestrating agent executes it with its
+  JIRA tools; a native REST executor is the later headless/CI option.
+- **Configure** — `.prwalk/config.json` (committed, team-shared) holds the issue
+  regex, remote, reviewer, and the status→transition mapping. **Secrets never go
+  here** — the future native executor reads `JIRA_BASE_URL` / `JIRA_EMAIL` /
+  `JIRA_API_TOKEN` from the environment.
+
+```jsonc
+// .prwalk/config.json
+{
+  "tracker": "jira",
+  "jira": {
+    "baseUrl": "https://acme.atlassian.net",
+    "issueKeyRegex": "[A-Z][A-Z0-9]+-\\d+",
+    "remote": "origin",
+    "reviewer": "<accountId|email>",
+    "transitions": {
+      "draft": "In Review", "in_review": "In Review",
+      "changes_requested": "In Progress", "approved": "Done"
+    }
+  }
+}
+```
+
+The derived status maps to a transition: a fresh/handed-off review → **In
+Review** (assigned to the reviewer); any rejection → **In Progress** (back to the
+author, with each `file — feedback` in the comment); all-accepted → **Done**.
+Without a tracker configured or an issue key, `sync` is a no-op and just prints
+the reviewer command.
 
 ## How chunk identity survives revisions
 

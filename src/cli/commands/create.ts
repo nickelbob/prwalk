@@ -6,6 +6,7 @@ export interface CreateOpts {
   branch?: string;
   title?: string;
   maxHunkLines?: number;
+  issue?: string;
   json?: boolean;
 }
 
@@ -15,9 +16,11 @@ export async function cmdCreate(cwd: string, opts: CreateOpts): Promise<void> {
     branch: opts.branch,
     title: opts.title,
     maxHunkLines: opts.maxHunkLines,
+    issue: opts.issue,
   });
-  const { counts, branch, round, baseSha, headSha, manifestPath, warnings } = result;
+  const { counts, branch, round, baseSha, headSha, manifestPath, warnings, manifest } = result;
   const slug = branchToSlug(branch);
+  const { issueKey, issueUrl } = manifest.pr;
 
   if (opts.json) {
     process.stdout.write(
@@ -28,6 +31,8 @@ export async function cmdCreate(cwd: string, opts: CreateOpts): Promise<void> {
         baseSha,
         headSha,
         counts,
+        issueKey,
+        issueUrl,
         manifestPath,
         warnings,
       }) + "\n",
@@ -54,6 +59,9 @@ export async function cmdCreate(cwd: string, opts: CreateOpts): Promise<void> {
     );
   }
   for (const w of warnings) lines.push(`  warning: ${w}`);
+  if (issueKey) {
+    lines.push(`  linked to ${issueKey}${issueUrl ? ` (${issueUrl})` : ""}`);
+  }
   lines.push(`  Edit each chunk's description AND risk (1=trivial … 5=critical) in ${manifestPath}`);
   lines.push(`  (risk drives what the reviewer sees; heuristic defaults are set but cap at 3 — elevate genuinely risky chunks)`);
   lines.push(`  Then run: prwalk serve ${slug}`);

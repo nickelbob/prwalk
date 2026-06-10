@@ -4,6 +4,8 @@ import { chunkFiles } from "./chunker.js";
 import { loadManifest, writeManifest } from "./manifest.js";
 import { manifestPath } from "./paths.js";
 import { buildInitialManifest, mergeRound, type MergeCounts } from "./merge.js";
+import { loadConfig, issueUrl } from "./config.js";
+import { extractIssueKey } from "./issueKey.js";
 import type { Manifest } from "./schema.js";
 
 export interface CreateOptions {
@@ -11,6 +13,8 @@ export interface CreateOptions {
   branch?: string;
   title?: string;
   maxHunkLines?: number;
+  /** Explicit issue-key override; falls back to extraction from the branch. */
+  issue?: string;
 }
 
 export interface CreateResult {
@@ -64,12 +68,26 @@ export async function createReview(
   const path = manifestPath(repoRoot, branch);
   const existing = await loadManifest(path);
 
+  // Correlate to a tracker issue: explicit --issue wins, else extract from the
+  // branch using the configured regex. Only set tracker/url when we have a key.
+  const config = await loadConfig(repoRoot);
+  const issueKey =
+    opts.issue?.trim() ||
+    extractIssueKey(branch, config.jira.issueKeyRegex) ||
+    null;
+  if (opts.issue && !issueKey) {
+    warnings.push(`--issue was empty; no issue key recorded.`);
+  }
+
   const meta = {
     branch,
     baseRef: opts.base,
     baseSha: base, // store the merge-base we actually diffed against
     headSha,
     title: opts.title,
+    issueKey,
+    issueUrl: issueKey ? issueUrl(config, issueKey) : null,
+    tracker: issueKey ? config.tracker ?? ("jira" as const) : null,
   };
 
   const { manifest, counts } = existing
