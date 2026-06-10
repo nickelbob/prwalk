@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Chunk } from "../types.js";
 import { DiffView } from "./DiffView.js";
 import { HistoryPanel } from "./HistoryPanel.js";
+import { RiskBadge } from "./RiskBadge.js";
 
 export interface ChunkCardProps {
   chunk: Chunk;
@@ -36,7 +37,10 @@ export function ChunkCard(props: ChunkCardProps) {
       onClick={props.onActivate}
     >
       <div className="chunk-head">
-        <span className={`badge ${state}`}>{state}</span>
+        <span className={`badge ${state}`}>
+          {state === "accepted" && chunk.decision.via === "auto-threshold" ? "auto" : state}
+        </span>
+        <RiskBadge risk={chunk.risk} />
         <span className="file">{chunk.file}</span>
         {chunk.changeType !== "modify" && (
           <span className="change-type">{chunk.changeType}</span>

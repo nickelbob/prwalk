@@ -92,6 +92,30 @@ export function apiRouter(
     }
   });
 
+  // Set the reviewer's review level (auto-accepts below-level chunks).
+  r.post("/reviews/:slug/review-level", async (req, res) => {
+    if (readOnly) {
+      return res.status(423).json({
+        error: "Read-only: another prwalk server owns writes for this repo.",
+      });
+    }
+    const level = Number((req.body ?? {}).level);
+    if (!Number.isInteger(level) || level < 1 || level > 5) {
+      return res.status(400).json({ error: "level must be an integer 1–5" });
+    }
+    try {
+      const { manifest, summary } = await store.setReviewLevel(req.params.slug, level);
+      res.json({
+        summary,
+        status: deriveStatus(manifest),
+        counts: countDecisions(manifest),
+        manifest,
+      });
+    } catch (err) {
+      res.status(409).json({ error: (err as Error).message });
+    }
+  });
+
   // Staleness check.
   r.post("/reviews/:slug/refresh", async (req, res) => {
     const manifest = await store.load(req.params.slug);

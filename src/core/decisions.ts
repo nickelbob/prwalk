@@ -47,6 +47,7 @@ export function applyDecision(
     revisionId: chunk.revisionId,
     action: input.action,
     feedback,
+    via: "explicit",
     actor: input.actor ?? "developer",
   };
 
@@ -56,6 +57,7 @@ export function applyDecision(
       state: input.action === "accept" ? "accepted" : "rejected",
       round,
       feedback,
+      via: "explicit",
       appliesToRevisionId: chunk.revisionId,
       decidedAt: ts,
     },

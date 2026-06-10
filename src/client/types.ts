@@ -5,10 +5,13 @@ export type DecisionState = "pending" | "accepted" | "rejected" | "stale";
 export type PrStatus = "draft" | "in_review" | "changes_requested" | "approved";
 export type ChangeType = "add" | "modify" | "delete" | "rename" | "binary" | "mode";
 
+export type DecisionVia = "explicit" | "auto-threshold";
+
 export interface Decision {
   state: DecisionState;
   round: number;
   feedback: string | null;
+  via: DecisionVia;
   appliesToRevisionId: string | null;
   decidedAt: string | null;
 }
@@ -33,6 +36,7 @@ export interface Chunk {
     truncated: boolean;
   };
   description: string;
+  risk: number;
   decision: Decision;
   lineage: string[];
   absent: boolean;
@@ -56,6 +60,7 @@ export interface PrMeta {
   createdAt: string;
   updatedAt: string;
   currentRound: number;
+  reviewLevel: number | null;
 }
 
 export interface AuditEvent {
@@ -102,6 +107,20 @@ export interface DecisionResponse {
   chunk: Chunk;
   status: PrStatus;
   counts: StatusCounts;
+}
+
+export interface LevelSummary {
+  level: number;
+  inScope: number;
+  autoAccepted: number;
+  reopened: number;
+}
+
+export interface LevelResponse {
+  summary: LevelSummary;
+  status: PrStatus;
+  counts: StatusCounts;
+  manifest: Manifest;
 }
 
 export interface ReviewListItem {

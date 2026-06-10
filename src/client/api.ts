@@ -1,5 +1,6 @@
 import type {
   DecisionResponse,
+  LevelResponse,
   ReviewListItem,
   ReviewResponse,
 } from "./types.js";
@@ -29,6 +30,19 @@ export async function postDecision(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function postReviewLevel(
+  slug: string,
+  level: number,
+): Promise<LevelResponse> {
+  return json(
+    await fetch(`/api/reviews/${encodeURIComponent(slug)}/review-level`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level }),
     }),
   );
 }

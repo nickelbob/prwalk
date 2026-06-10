@@ -36,6 +36,7 @@ function pendingDecision(round: number, revisionId: string): Decision {
     state: "pending",
     round,
     feedback: null,
+    via: "explicit",
     appliesToRevisionId: revisionId,
     decidedAt: null,
   };
@@ -63,6 +64,7 @@ function newChunk(
     anchor: c.anchor,
     diff: c.diff,
     description: "",
+    risk: c.risk,
     decision: pendingDecision(round, revisionId),
     lineage,
     absent: false,
@@ -105,6 +107,7 @@ export function buildInitialManifest(
       createdAt,
       updatedAt: createdAt,
       currentRound: round,
+      reviewLevel: null,
     },
     rounds: [
       { round, baseSha: meta.baseSha, headSha: meta.headSha, createdAt },

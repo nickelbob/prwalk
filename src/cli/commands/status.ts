@@ -45,20 +45,27 @@ export async function cmdStatus(
     `${report.branch} — round ${report.round} — ${report.status.toUpperCase().replace("_", " ")} ` +
       `(${report.counts.rejected} rejected, ${report.counts.pending} pending, ${report.counts.accepted} accepted)`,
   );
+  if (report.reviewLevel !== null) {
+    lines.push(
+      `  review level: ${report.reviewLevel}+ · ${report.autoAccepted} chunk(s) auto-accepted below level`,
+    );
+  } else {
+    lines.push(`  review level: not set yet (reviewer picks a 1–5 floor before reviewing)`);
+  }
   if (report.stale) {
     lines.push(`  ! branch advanced since this review was generated — re-run prwalk create`);
   }
   if (report.rejected.length) {
     lines.push(``, `Rejected chunks (act on these):`);
     for (const c of report.rejected) {
-      lines.push(`  [${c.stableId}] ${c.file}  ${c.description ? `"${c.description}"` : ""}`);
+      lines.push(`  [${c.stableId}] risk ${c.risk} · ${c.file}  ${c.description ? `"${c.description}"` : ""}`);
       if (c.feedback) lines.push(`     feedback: ${c.feedback}`);
     }
   }
   if (report.pending.length) {
     lines.push(``, `Pending chunks (awaiting review):`);
     for (const c of report.pending) {
-      lines.push(`  [${c.stableId}] ${c.file}  ${c.description ? `"${c.description}"` : ""}`);
+      lines.push(`  [${c.stableId}] risk ${c.risk} · ${c.file}  ${c.description ? `"${c.description}"` : ""}`);
     }
   }
   process.stdout.write(lines.join("\n") + "\n");

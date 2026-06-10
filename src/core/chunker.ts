@@ -48,6 +48,49 @@ export function inferLanguage(path: string): string {
   return LANG_BY_EXT[ext] ?? "text";
 }
 
+const LOW_RISK_EXT = new Set(["css", "scss", "md", "markdown", "txt", "json", "yml", "yaml", "toml"]);
+
+/**
+ * Heuristic starting risk (1 trivial … 5 critical). Conservative: caps at 3
+ * (moderate) so the agent must consciously elevate genuinely risky changes to
+ * 4/5 — nothing risky is hidden by a guessed-low default. The PR creator is
+ * expected to confirm/override each value in the manifest.
+ */
+export function inferRisk(
+  path: string,
+  patch: string,
+  changeType: ParsedFile["changeType"],
+): number {
+  if (changeType === "rename" || changeType === "mode") return 1;
+  if (changeType === "binary") return 2;
+
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const isTest = /\.(test|spec)\./.test(path) || /(^|\/)__tests__\//.test(path);
+
+  // Body lines that actually changed (added/removed), minus diff file markers.
+  const changed = patch
+    .split("\n")
+    .filter((l) => (l.startsWith("+") || l.startsWith("-")) && !l.startsWith("+++") && !l.startsWith("---"))
+    .map((l) => l.slice(1).trim());
+
+  const allTrivial =
+    changed.length > 0 &&
+    changed.every(
+      (l) =>
+        l === "" ||
+        l.startsWith("import ") ||
+        l.startsWith("export {") ||
+        l.startsWith("//") ||
+        l.startsWith("/*") ||
+        l.startsWith("*") ||
+        l.startsWith("#") ||
+        l.startsWith("export * from"),
+    );
+  if (allTrivial) return 1;
+  if (LOW_RISK_EXT.has(ext) || isTest) return 2;
+  return 3;
+}
+
 export interface ChunkerOptions {
   /** Hunks longer than this many body lines are split into sub-chunks. */
   maxHunkLines?: number;
@@ -60,6 +103,7 @@ function hunkToCandidate(file: ParsedFile, hunk: ParsedHunk): CandidateChunk {
     previousFile: file.changeType === "rename" ? file.oldPath : null,
     changeType: file.changeType,
     language: inferLanguage(path),
+    risk: inferRisk(path, hunk.patch, file.changeType),
     anchor: makeAnchor(path, hunk),
     diff: {
       format: "unified",
@@ -90,6 +134,7 @@ function fileToSyntheticCandidate(file: ParsedFile): CandidateChunk {
     previousFile: file.changeType === "rename" ? file.oldPath : null,
     changeType: file.changeType,
     language: inferLanguage(path),
+    risk: inferRisk(path, label, file.changeType),
     anchor: makeAnchor(path, {
       header: label,
       oldStart: 0,

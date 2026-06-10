@@ -5,6 +5,7 @@ import * as git from "../core/git.js";
 import { loadManifest, writeManifest } from "../core/manifest.js";
 import { prwalkDir } from "../core/paths.js";
 import { applyDecision, type DecisionInput } from "../core/decisions.js";
+import { applyReviewLevel } from "../core/reviewLevel.js";
 import type { Manifest } from "../core/schema.js";
 
 /**
@@ -60,6 +61,18 @@ export class ReviewStore {
       await writeManifest(path, updated);
       await git.add(this.repoRoot, path);
       return { manifest: updated, chunk };
+    });
+  }
+
+  async setReviewLevel(slug: string, level: number) {
+    return this.withLock(slug, async () => {
+      const path = this.pathForSlug(slug);
+      const manifest = await loadManifest(path);
+      if (!manifest) throw new Error(`no review for ${slug}`);
+      const { manifest: updated, summary } = applyReviewLevel(manifest, level);
+      await writeManifest(path, updated);
+      await git.add(this.repoRoot, path);
+      return { manifest: updated, summary };
     });
   }
 

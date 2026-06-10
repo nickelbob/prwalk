@@ -6,6 +6,7 @@ export interface ChunkBrief {
   file: string;
   revisionId: string;
   description: string;
+  risk: number;
   feedback?: string | null;
 }
 
@@ -14,6 +15,8 @@ export interface StatusReport {
   round: number;
   status: ReturnType<typeof deriveStatus>;
   counts: StatusCounts;
+  reviewLevel: number | null;
+  autoAccepted: number;
   rejected: ChunkBrief[];
   pending: ChunkBrief[];
   stale: boolean;
@@ -33,6 +36,7 @@ export function buildStatusReport(
       file: c.file,
       revisionId: c.revisionId,
       description: c.description,
+      risk: c.risk,
       feedback: c.decision.feedback,
     }));
   const pending: ChunkBrief[] = live
@@ -42,7 +46,11 @@ export function buildStatusReport(
       file: c.file,
       revisionId: c.revisionId,
       description: c.description,
+      risk: c.risk,
     }));
+  const autoAccepted = live.filter(
+    (c) => c.decision.state === "accepted" && c.decision.via === "auto-threshold",
+  ).length;
 
   const stale = liveHeadSha !== null && liveHeadSha !== manifest.pr.headSha;
 
@@ -51,6 +59,8 @@ export function buildStatusReport(
     round: manifest.pr.currentRound,
     status: deriveStatus(manifest),
     counts: countDecisions(manifest),
+    reviewLevel: manifest.pr.reviewLevel,
+    autoAccepted,
     rejected,
     pending,
     stale,

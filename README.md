@@ -28,9 +28,9 @@ npm link          # exposes the global `prwalk` command
 |------|-----|---------|
 | 1. Commit code on a branch | agent | `git commit …` |
 | 2. Build the review manifest | agent | `prwalk create --base main` |
-| 3. Annotate chunk descriptions / sections | agent | edit `.prwalk/<branch>.json` |
+| 3. Annotate descriptions / sections / **risk 1–5** | agent | edit `.prwalk/<branch>.json` |
 | 4. Serve + send the link | agent | `prwalk serve` → `http://localhost:7777/r/<slug>` |
-| 5. Review chunk-by-chunk | **you** | accept / reject in the browser |
+| 5. Pick a review level, review in-scope chunks one-at-a-time | **you** | accept / reject in the browser |
 | 6. Read decisions back | agent | `prwalk status --json` |
 | 7. Revise rejected code, commit | agent | `git commit …` |
 | 8. Re-run create (round 2…) | agent | `prwalk create --base main` |
@@ -38,6 +38,26 @@ npm link          # exposes the global `prwalk` command
 | 10. Commit the audit log | **you** | `prwalk commit-msg` suggests a message |
 
 Repeat 5–9 until `prwalk status` reports **approved**.
+
+## Risk-gated, one-at-a-time review
+
+You don't have to look at everything. The PR creator (agent) tags each chunk with
+a **risk level 1–5** (1 trivial … 5 critical) in the manifest. When you open a
+review, you pick the level you want to review at — e.g. "**3 and up**". prwalk then:
+
+- puts the in-scope chunks (risk ≥ your level) in front of you **one at a time** —
+  read it, Accept or Reject with feedback, and it advances to the next;
+- **auto-accepts** everything below your level, recorded in the audit log as
+  `accepted (auto · under threshold N)` so it's honest that you didn't individually
+  review it. The PR can still reach `approved`.
+
+Your explicit decisions are sticky: changing the level never overrides a chunk you
+actually clicked. Lowering the level reopens previously auto-accepted chunks for
+review. An **overview** toggle still shows the whole list if you want it.
+
+The agent should set each chunk's `risk` in `.prwalk/<branch>.json` (a heuristic
+default is filled in but caps at 3 — genuinely risky changes must be elevated to
+4/5 deliberately).
 
 ## Commands
 

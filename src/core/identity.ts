@@ -53,6 +53,7 @@ export interface CandidateChunk {
   previousFile: string | null;
   changeType: Chunk["changeType"];
   language: string;
+  risk: number;
   anchor: Anchor;
   diff: Chunk["diff"];
 }

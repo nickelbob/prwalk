@@ -54,7 +54,8 @@ export async function cmdCreate(cwd: string, opts: CreateOpts): Promise<void> {
     );
   }
   for (const w of warnings) lines.push(`  warning: ${w}`);
-  lines.push(`  Edit descriptions in ${manifestPath}`);
+  lines.push(`  Edit each chunk's description AND risk (1=trivial … 5=critical) in ${manifestPath}`);
+  lines.push(`  (risk drives what the reviewer sees; heuristic defaults are set but cap at 3 — elevate genuinely risky chunks)`);
   lines.push(`  Then run: prwalk serve ${slug}`);
   process.stdout.write(lines.join("\n") + "\n");
 }

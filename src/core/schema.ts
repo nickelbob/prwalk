@@ -57,14 +57,23 @@ export const ChunkDiff = z.object({
 });
 export type ChunkDiff = z.infer<typeof ChunkDiff>;
 
+/** How a decision was reached: by the reviewer, or auto-accepted below the
+ * chosen review level (not individually reviewed). */
+export const DecisionVia = z.enum(["explicit", "auto-threshold"]);
+export type DecisionVia = z.infer<typeof DecisionVia>;
+
 export const Decision = z.object({
   state: DecisionState,
   round: z.number().int(),
   feedback: z.string().nullable().default(null),
+  via: DecisionVia.default("explicit"),
   appliesToRevisionId: z.string().nullable().default(null),
   decidedAt: z.string().nullable().default(null),
 });
 export type Decision = z.infer<typeof Decision>;
+
+/** Risk level the PR creator assigns to a chunk: 1 trivial … 5 critical. */
+export const Risk = z.number().int().min(1).max(5);
 
 export const Chunk = z.object({
   stableId: z.string(),
@@ -80,6 +89,7 @@ export const Chunk = z.object({
   anchor: Anchor,
   diff: ChunkDiff,
   description: z.string().default(""),
+  risk: Risk.default(3),
   decision: Decision,
   lineage: z.array(z.string()).default([]),
   absent: z.boolean().default(false),
@@ -113,6 +123,9 @@ export const PrMeta = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   currentRound: z.number().int(),
+  /** Minimum risk the reviewer chooses to review one-at-a-time; null until set.
+   * Chunks below this are auto-accepted. */
+  reviewLevel: Risk.nullable().default(null),
 });
 export type PrMeta = z.infer<typeof PrMeta>;
 
@@ -139,6 +152,7 @@ export const DecisionEvent = EventBase.extend({
   revisionId: z.string(),
   action: z.enum(["accept", "reject"]),
   feedback: z.string().nullable().default(null),
+  via: DecisionVia.default("explicit"),
   actor: z.enum(["developer", "agent"]).default("developer"),
 });
 export type DecisionEvent = z.infer<typeof DecisionEvent>;

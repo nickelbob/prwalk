@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Chunk, ReviewListItem, ReviewResponse } from "./types.js";
-import { fetchReview, fetchReviews, postDecision } from "./api.js";
+import { fetchReview, fetchReviews, postDecision, postReviewLevel } from "./api.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { ReviewView } from "./components/ReviewView.js";
+import { ReviewGate } from "./components/ReviewGate.js";
+import { FocusedReview } from "./components/FocusedReview.js";
+
+type Mode = "gate" | "focused" | "overview";
 
 function slugFromPath(): string | null {
   const m = window.location.pathname.match(/^\/r\/([^/]+)/);
@@ -54,12 +58,37 @@ function Review({ slug, onBack }: { slug: string; onBack: () => void }) {
   const [data, setData] = useState<ReviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [levelBusy, setLevelBusy] = useState(false);
 
   const load = useCallback(() => {
-    fetchReview(slug).then(setData).catch((e) => setError(e.message));
+    fetchReview(slug)
+      .then((d) => {
+        setData(d);
+        // First load: gate if no level chosen yet, else go straight to focused.
+        setMode((m) => m ?? (d.manifest.pr.reviewLevel === null ? "gate" : "focused"));
+      })
+      .catch((e) => setError(e.message));
   }, [slug]);
 
   useEffect(() => { load(); }, [load]);
+
+  const setLevel = async (level: number) => {
+    setLevelBusy(true);
+    try {
+      const res = await postReviewLevel(slug, level);
+      setData((prev) =>
+        prev
+          ? { ...prev, manifest: res.manifest, status: res.status, counts: res.counts }
+          : prev,
+      );
+      setMode("focused");
+    } catch (e) {
+      alert(`Failed to set level: ${(e as Error).message}`);
+    } finally {
+      setLevelBusy(false);
+    }
+  };
 
   const patchChunk = (updated: Chunk, status?: ReviewResponse["status"], counts?: ReviewResponse["counts"]) => {
     setData((prev) => {
@@ -110,32 +139,62 @@ function Review({ slug, onBack }: { slug: string; onBack: () => void }) {
   };
 
   if (error) return <div className="centered error">{error}</div>;
-  if (!data) return <div className="centered">Loading review…</div>;
+  if (!data || !mode) return <div className="centered">Loading review…</div>;
+
+  const level = data.manifest.pr.reviewLevel ?? 3;
 
   return (
     <div className="app">
       <button className="back" onClick={onBack}>← all reviews</button>
-      <StatusBar
-        pr={data.manifest.pr}
-        status={data.status}
-        counts={data.counts}
-        stale={data.stale}
-        slug={slug}
-      />
-      {data.readOnly && (
-        <div className="readonly-banner">
-          Read-only: another prwalk server owns writes for this repo. Stop it (or
-          use it) to record decisions here.
-        </div>
+
+      {mode === "gate" ? (
+        <ReviewGate manifest={data.manifest} busy={levelBusy} onStart={setLevel} />
+      ) : (
+        <>
+          <StatusBar
+            pr={data.manifest.pr}
+            status={data.status}
+            counts={data.counts}
+            stale={data.stale}
+            slug={slug}
+          />
+          {data.readOnly && (
+            <div className="readonly-banner">
+              Read-only: another prwalk server owns writes for this repo. Stop it (or
+              use it) to record decisions here.
+            </div>
+          )}
+          {mode === "focused" ? (
+            <FocusedReview
+              manifest={data.manifest}
+              slug={slug}
+              level={level}
+              readOnly={data.readOnly}
+              busy={busy}
+              counts={data.counts}
+              decide={decide}
+              onChangeLevel={() => setMode("gate")}
+              onOverview={() => setMode("overview")}
+            />
+          ) : (
+            <>
+              <div className="overview-bar">
+                <button className="btn ghost" onClick={() => setMode("focused")}>
+                  ← back to guided review
+                </button>
+              </div>
+              <ReviewView
+                manifest={data.manifest}
+                slug={slug}
+                busy={busy}
+                readOnly={data.readOnly}
+                onAccept={(c) => decide(c, "accept")}
+                onReject={(c, fb) => decide(c, "reject", fb)}
+              />
+            </>
+          )}
+        </>
       )}
-      <ReviewView
-        manifest={data.manifest}
-        slug={slug}
-        busy={busy}
-        readOnly={data.readOnly}
-        onAccept={(c) => decide(c, "accept")}
-        onReject={(c, fb) => decide(c, "reject", fb)}
-      />
     </div>
   );
 }
