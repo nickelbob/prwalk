@@ -97,6 +97,23 @@ export async function repoRoot(cwd: string): Promise<string> {
   return (await git(cwd, ["rev-parse", "--show-toplevel"])).trim();
 }
 
+export type PathState = "committed" | "staged" | "modified" | "untracked";
+
+/**
+ * Working-tree state of a single path, for telling the reviewer whether the
+ * audit log has been committed yet. "committed" = no pending change (clean);
+ * "staged" = changes in the index (prwalk git-adds after each decision);
+ * "modified" = unstaged changes; "untracked" = never added.
+ */
+export async function pathStatus(cwd: string, path: string): Promise<PathState> {
+  const out = (await git(cwd, ["status", "--porcelain", "--", path])).trimEnd();
+  if (!out) return "committed";
+  const code = out.slice(0, 2); // XY: X=index, Y=worktree
+  if (code === "??") return "untracked";
+  if (code[0] !== " ") return "staged"; // has an index change (possibly + worktree)
+  return "modified";
+}
+
 /** Fetch refs from a remote (prunes deleted remote branches). */
 export async function fetch(cwd: string, remote: string): Promise<void> {
   await git(cwd, ["fetch", "--prune", remote]);

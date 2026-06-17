@@ -41,6 +41,14 @@ npm link          # exposes the global `prwalk` command
 
 Repeat 6–11 until `prwalk status` reports **approved**.
 
+### What a review does (and doesn't)
+Reviewing is deliberately low-side-effect. As you accept/reject, each decision
+is written to the audit log (`.prwalk/<branch>.json`) and **`git add`-staged** —
+live. That's it. prwalk **never commits** (you commit the log) and **reviewing
+never touches JIRA** (the tracker only moves when someone runs `prwalk sync`).
+The completion screen and `prwalk status` both spell out this state — what's
+saved, what's still uncommitted, and the next step for you vs. the agent.
+
 ## Risk-gated, one-at-a-time review
 
 You don't have to look at everything. The PR creator (agent) tags each chunk with

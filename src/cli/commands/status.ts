@@ -1,4 +1,4 @@
-import { currentBranch, repoRoot, revParse } from "../../core/git.js";
+import { currentBranch, repoRoot, revParse, pathStatus } from "../../core/git.js";
 import { loadManifest } from "../../core/manifest.js";
 import { manifestPath } from "../../core/paths.js";
 import { buildStatusReport } from "../../core/report.js";
@@ -34,9 +34,19 @@ export async function cmdStatus(
     liveHead = null;
   }
   const report = buildStatusReport(manifest, liveHead);
+  const auditState = await pathStatus(cwd, path);
+  const issueKey = manifest.pr.issueKey;
+  const tracker = manifest.pr.tracker;
 
   if (opts.json) {
-    process.stdout.write(JSON.stringify(report) + "\n");
+    process.stdout.write(
+      JSON.stringify({
+        ...report,
+        audit: { path, state: auditState },
+        issueKey,
+        issueUrl: manifest.pr.issueUrl,
+      }) + "\n",
+    );
     return;
   }
 
@@ -68,5 +78,36 @@ export async function cmdStatus(
       lines.push(`  [${c.stableId}] risk ${c.risk} · ${c.file}  ${c.description ? `"${c.description}"` : ""}`);
     }
   }
+
+  // End-of-round ledger: what's recorded, and what still has to happen.
+  const auditLabel: Record<typeof auditState, string> = {
+    committed: "committed ✓",
+    staged: "saved & staged (NOT yet committed)",
+    modified: "saved, unstaged (NOT yet committed)",
+    untracked: "saved, untracked (NOT yet committed)",
+  };
+  lines.push(``, `This review:`);
+  lines.push(`  audit log: ${path} — ${auditLabel[auditState]}`);
+  if (issueKey) {
+    lines.push(`  ${issueKey}: linked${report.pending.length === 0 ? "" : " · review still in progress"} — JIRA changes only on \`prwalk sync\` (reviewing never touches it)`);
+  } else {
+    lines.push(`  tracker: not linked (no issue key on this review)`);
+  }
+
+  const next: string[] = [];
+  if (report.pending.length > 0) {
+    next.push(`reviewer: ${report.pending.length} chunk(s) still pending — finish the walkthrough`);
+  }
+  if (auditState !== "committed") {
+    next.push(`you: commit the audit log →  git commit -m "$(prwalk commit-msg ${report.branch})"`);
+  }
+  if (issueKey && tracker && report.pending.length === 0) {
+    next.push(`agent: prwalk sync ${report.branch}  → update ${issueKey} (${report.status})`);
+  }
+  if (next.length) {
+    lines.push(``, `Next:`);
+    for (const n of next) lines.push(`  • ${n}`);
+  }
+
   process.stdout.write(lines.join("\n") + "\n");
 }

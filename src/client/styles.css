@@ -208,6 +208,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .commit-suggest { margin: 1.25rem 0; display: flex; flex-direction: column; gap: 0.35rem; }
 .commit-suggest code { background: var(--panel-2); padding: 0.5rem; border-radius: 6px; word-break: break-word; }
 .completion-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+.done-ledger { text-align: left; margin: 1.25rem 0; display: flex; flex-direction: column; gap: 0.5rem;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
+.done-row { font-size: 0.9rem; line-height: 1.4; }
+.done-row .done-yes, .done-row .done-no { display: inline-block; min-width: 7.5rem; font-weight: 600; margin-right: 0.5rem; }
+.done-row .done-yes { color: var(--add-fg); }
+.done-row .done-no { color: var(--muted); }
+.next-steps { text-align: left; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.next-steps > strong { display: block; }
 .overview-bar { margin-bottom: 0.75rem; }
 
 /* ---- Collapsible diffs (M5c) ---- */

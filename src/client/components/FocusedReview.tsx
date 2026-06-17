@@ -94,6 +94,7 @@ export function FocusedReview({
       <Completion
         slug={slug}
         counts={counts}
+        issueKey={manifest.pr.issueKey}
         emptyAtLevel={level}
         onChangeLevel={onChangeLevel}
         onOverview={onOverview}
@@ -106,6 +107,7 @@ export function FocusedReview({
       <Completion
         slug={slug}
         counts={counts}
+        issueKey={manifest.pr.issueKey}
         onChangeLevel={onChangeLevel}
         onOverview={onOverview}
         onReviewAgain={() => setIdx(0)}
@@ -175,6 +177,7 @@ export function FocusedReview({
 function Completion({
   slug,
   counts,
+  issueKey,
   emptyAtLevel,
   onChangeLevel,
   onOverview,
@@ -182,6 +185,7 @@ function Completion({
 }: {
   slug: string;
   counts: StatusCounts;
+  issueKey: string | null;
   emptyAtLevel?: number;
   onChangeLevel: () => void;
   onOverview: () => void;
@@ -192,23 +196,55 @@ function Completion({
     fetchCommitMessage(slug).then(setMsg).catch(() => {});
   }, [slug]);
 
+  const changesRequested = counts.rejected > 0;
+  const outcome = emptyAtLevel
+    ? `Nothing to review at level ${emptyAtLevel}+`
+    : changesRequested
+      ? "Changes requested"
+      : "Approved at this level";
+
   return (
     <div className="completion">
-      <div className="check">✓</div>
-      <h2>
-        {emptyAtLevel
-          ? `Nothing to review at level ${emptyAtLevel}+`
-          : "All chunks at this level reviewed"}
-      </h2>
+      <div className="check">{changesRequested ? "✎" : "✓"}</div>
+      <h2>{outcome}</h2>
       <p className="muted">
         {counts.accepted} accepted · {counts.rejected} rejected · {counts.pending} pending
       </p>
-      {msg && (
-        <div className="commit-suggest">
-          <span className="muted">Commit the audit log with:</span>
-          <code>{msg}</code>
+
+      {/* What just happened — make the side effects (and non-effects) explicit. */}
+      <div className="done-ledger">
+        <div className="done-row">
+          <span className="done-yes">✓ saved</span>
+          your decisions are recorded in the audit log and staged in git
         </div>
-      )}
+        <div className="done-row">
+          <span className="done-no">○ not committed</span>
+          prwalk never commits — you commit the audit log (below)
+        </div>
+        <div className="done-row">
+          <span className="done-no">○ JIRA unchanged</span>
+          {issueKey
+            ? `${issueKey} moves only when your agent runs \`prwalk sync\` — reviewing never touches it`
+            : `no issue linked; nothing to sync`}
+        </div>
+      </div>
+
+      <div className="next-steps">
+        <strong>Next</strong>
+        {msg && (
+          <div className="commit-suggest">
+            <span className="muted">1. Commit the audit log:</span>
+            <code>{`git commit -m "${msg}"`}</code>
+          </div>
+        )}
+        <div className="muted">
+          2. Hand back to your agent — it reads <code>prwalk status</code>
+          {changesRequested ? ", acts on your rejections," : ""} and
+          {issueKey ? ` syncs ${issueKey}` : " syncs the tracker"} via{" "}
+          <code>prwalk sync</code>.
+        </div>
+      </div>
+
       <div className="completion-actions">
         <button className="btn" onClick={onChangeLevel}>Lower level to review more</button>
         <button className="btn ghost" onClick={onOverview}>See full overview</button>
