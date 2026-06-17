@@ -75,7 +75,8 @@ program
   .description("Emit the tracker SyncPlan (transition + comment + assignee) for the review")
   .argument("[branch]", "branch (default: current branch)")
   .option("--json", "machine-readable output")
-  .option("--execute", "execute via the native JIRA client (not yet implemented)")
+  .option("--execute", "execute the plan via the native JIRA client (uses JIRA_* env credentials)")
+  .option("--dry-run", "show what --execute would do, without contacting JIRA")
   .action(async (branch, opts) => {
     const cwd = await requireRepo();
     await cmdSync(cwd, branch, opts);

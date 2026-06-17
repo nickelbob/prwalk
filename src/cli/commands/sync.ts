@@ -3,10 +3,16 @@ import { loadManifest } from "../../core/manifest.js";
 import { manifestPath } from "../../core/paths.js";
 import { loadConfig } from "../../core/config.js";
 import { buildSyncPlan } from "../../core/sync.js";
+import {
+  JiraClient,
+  describeExecution,
+  executeSyncPlan,
+} from "../../core/jiraClient.js";
 
 export interface SyncOpts {
   json?: boolean;
   execute?: boolean;
+  dryRun?: boolean;
 }
 
 /**
@@ -38,12 +44,59 @@ export async function cmdSync(
   const config = await loadConfig(root);
   const plan = buildSyncPlan(manifest, config);
 
+  if (opts.dryRun) {
+    const actions = describeExecution(plan);
+    if (opts.json) {
+      process.stdout.write(JSON.stringify({ plan, actions, dryRun: true }) + "\n");
+      return;
+    }
+    process.stdout.write(`prwalk sync --dry-run — ${plan.issueKey ?? "(no issue)"}\n`);
+    if (actions.length === 0) {
+      process.stdout.write(`  (nothing to do — no issue key / tracker)\n`);
+    } else {
+      for (const a of actions) process.stdout.write(`  would ${a.detail}\n`);
+    }
+    return;
+  }
+
   if (opts.execute) {
-    process.stderr.write(
-      `prwalk: native --execute is not built yet. Pipe \`prwalk sync ${br} --json\` to your agent, ` +
-        `which executes the plan via its JIRA tools.\n`,
-    );
-    process.exitCode = 2;
+    if (plan.noop) {
+      process.stdout.write(
+        `prwalk: nothing to sync for ${br} (no issue key or no tracker configured).\n`,
+      );
+      return;
+    }
+    const baseUrl = process.env.JIRA_BASE_URL || config.jira.baseUrl;
+    const email = process.env.JIRA_EMAIL;
+    const token = process.env.JIRA_API_TOKEN;
+    const missing = [
+      !baseUrl && "JIRA_BASE_URL (or jira.baseUrl in config)",
+      !email && "JIRA_EMAIL",
+      !token && "JIRA_API_TOKEN",
+    ].filter(Boolean);
+    if (missing.length) {
+      process.stderr.write(
+        `prwalk: --execute needs credentials in the environment. Missing: ${missing.join(", ")}.\n` +
+          `  Create an API token at https://id.atlassian.com/manage-profile/security/api-tokens\n` +
+          `  Or omit --execute and pipe \`prwalk sync ${br} --json\` to an agent with JIRA tools.\n`,
+      );
+      process.exitCode = 2;
+      return;
+    }
+    try {
+      const client = new JiraClient({
+        baseUrl: baseUrl as string,
+        email: email as string,
+        token: token as string,
+      });
+      const result = await executeSyncPlan(plan, client);
+      for (const d of result.done) process.stdout.write(`  ✓ ${d}\n`);
+      for (const s of result.skipped) process.stdout.write(`  · ${s}\n`);
+      process.stdout.write(`prwalk: synced ${plan.issueKey} (${plan.prStatus}).\n`);
+    } catch (e) {
+      process.stderr.write(`prwalk: sync --execute failed: ${(e as Error).message}\n`);
+      process.exitCode = 1;
+    }
     return;
   }
 

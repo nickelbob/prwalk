@@ -73,11 +73,13 @@ default is filled in but caps at 3 — genuinely risky changes must be elevated 
   link. Auto-increments the port on conflict unless `--port` is explicit.
 - `prwalk status [branch] [--json]`
   The agent's read path. `--json` returns `{status, counts, rejected[], pending[], stale, …}`.
-- `prwalk sync [branch] [--json]`
+- `prwalk sync [branch] [--json] [--execute] [--dry-run]`
   Emits the **SyncPlan** for the review's current state — the JIRA transition,
   comment, and assignee that should follow. Prints it for the orchestrating
-  agent to execute via its own JIRA tools; `--json` for machine consumption.
-  (`--execute`, a built-in REST executor, is reserved/not yet implemented.)
+  agent to execute via its own JIRA tools (`--json` for machine consumption), or
+  applies it directly with `--execute` (native REST client; reads `JIRA_BASE_URL`
+  / `JIRA_EMAIL` / `JIRA_API_TOKEN` from the environment). `--dry-run` shows what
+  `--execute` would do without contacting JIRA.
 - `prwalk review <ISSUE-KEY> [--branch <name>] [--remote <name>] [--port N]`
   The **reviewer's** entry point. Fetches the remote, resolves the branch
   carrying that issue key (or `--branch`), checks it out, and serves the review
