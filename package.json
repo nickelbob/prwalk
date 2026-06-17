@@ -16,7 +16,6 @@
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.json",
     "build:client": "vite build",
-    "prepare": "npm run build",
     "dev:client": "vite",
     "dev:server": "tsx watch src/cli/index.ts serve --dev",
     "test": "vitest run",

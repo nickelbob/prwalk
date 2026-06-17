@@ -1,0 +1,51 @@
+import { createReview } from "../../core/create.js";
+import { branchToSlug } from "../../core/paths.js";
+export async function cmdCreate(cwd, opts) {
+    const result = await createReview(cwd, {
+        base: opts.base,
+        branch: opts.branch,
+        title: opts.title,
+        maxHunkLines: opts.maxHunkLines,
+        issue: opts.issue,
+    });
+    const { counts, branch, round, baseSha, headSha, manifestPath, warnings, manifest } = result;
+    const slug = branchToSlug(branch);
+    const { issueKey, issueUrl } = manifest.pr;
+    if (opts.json) {
+        process.stdout.write(JSON.stringify({
+            branch,
+            slug,
+            round,
+            baseSha,
+            headSha,
+            counts,
+            issueKey,
+            issueUrl,
+            manifestPath,
+            warnings,
+        }) + "\n");
+        return;
+    }
+    if (counts.total === 0 && counts.new === 0) {
+        process.stdout.write(`prwalk: no changes between ${opts.base} and ${branch} — nothing to review.\n`);
+        return;
+    }
+    const lines = [];
+    lines.push(`prwalk: round ${round} ${round === 1 ? "created" : "updated"} for ${branch} (base ${opts.base} @ ${baseSha.slice(0, 7)}, head ${headSha.slice(0, 7)})`);
+    if (round === 1) {
+        lines.push(`  ${counts.total} chunk(s) to review`);
+    }
+    else {
+        lines.push(`  ${counts.total} live chunk(s) — ${counts.new} new, ${counts.revised} revised (re-review needed), ${counts.unchanged} unchanged (carried), ${counts.absent} no longer in diff`);
+    }
+    for (const w of warnings)
+        lines.push(`  warning: ${w}`);
+    if (issueKey) {
+        lines.push(`  linked to ${issueKey}${issueUrl ? ` (${issueUrl})` : ""}`);
+    }
+    lines.push(`  Edit each chunk's description AND risk (1=trivial … 5=critical) in ${manifestPath}`);
+    lines.push(`  (risk drives what the reviewer sees; heuristic defaults are set but cap at 3 — elevate genuinely risky chunks)`);
+    lines.push(`  Then run: prwalk serve ${slug}`);
+    process.stdout.write(lines.join("\n") + "\n");
+}
+//# sourceMappingURL=create.js.map
