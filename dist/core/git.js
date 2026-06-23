@@ -67,7 +67,26 @@ export async function uncommittedCount(cwd) {
     const out = await git(cwd, ["status", "--porcelain"]);
     return out.split("\n").filter((l) => l.trim().length > 0).length;
 }
+/** True if `path` is excluded by a gitignore rule. */
+export async function isIgnored(cwd, path) {
+    try {
+        const out = await git(cwd, ["check-ignore", "--", path]);
+        return out.trim().length > 0;
+    }
+    catch {
+        // `git check-ignore` exits non-zero when the path is NOT ignored.
+        return false;
+    }
+}
+/**
+ * Stage `path` for commit. Best-effort: if the repo gitignores the prwalk
+ * audit log (some teams deliberately don't ship review artifacts), skip the
+ * add silently instead of failing the whole review. The manifest is already
+ * written to disk by the caller before this runs, so decisions still persist.
+ */
 export async function add(cwd, path) {
+    if (await isIgnored(cwd, path))
+        return;
     await git(cwd, ["add", "--", path]);
 }
 export async function repoRoot(cwd) {
