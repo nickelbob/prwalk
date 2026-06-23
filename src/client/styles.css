@@ -88,11 +88,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .chunk.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .chunk.accepted { opacity: 0.85; }
 .chunk-head {
-  display: flex; align-items: center; gap: 0.6rem;
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
   padding: 0.6rem 0.85rem; background: var(--panel-2);
   border-bottom: 1px solid var(--border);
 }
-.chunk-head .file { font-family: ui-monospace, monospace; font-size: 0.85rem; flex: 1; }
+.chunk-head .file {
+  font-family: ui-monospace, monospace; font-size: 0.85rem;
+  flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere;
+}
 .chunk-head .stats { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.8rem; }
 .change-type {
   font-size: 0.7rem; text-transform: uppercase; color: var(--muted);
@@ -124,6 +127,22 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .diff .del .sign { color: var(--del-fg); }
 .diff .hunk { color: var(--accent); background: rgba(47,129,247,0.08); }
 .diff .hunk .code { color: var(--accent); }
+
+/* Prism syntax tokens (dark, tuned for the #0b0f14 diff background).
+   Without these, prismjs tags tokens but they render with no color. */
+.diff .code { color: #c9d1d9; }
+.diff .token.comment, .diff .token.prolog, .diff .token.doctype,
+.diff .token.cdata { color: #8b949e; font-style: italic; }
+.diff .token.punctuation { color: #c9d1d9; }
+.diff .token.keyword, .diff .token.operator, .diff .token.boolean,
+.diff .token.tag, .diff .token.deleted { color: #ff7b72; }
+.diff .token.string, .diff .token.char, .diff .token.attr-value,
+.diff .token.regex, .diff .token.inserted { color: #a5d6ff; }
+.diff .token.number, .diff .token.constant, .diff .token.symbol,
+.diff .token.property, .diff .token.attr-name { color: #79c0ff; }
+.diff .token.function, .diff .token.class-name { color: #d2a8ff; }
+.diff .token.builtin, .diff .token.variable, .diff .token.selector { color: #ffa657; }
+.diff .token.important, .diff .token.bold { font-weight: 600; }
 
 /* ---- Actions ---- */
 .chunk-actions, .reject-actions { display: flex; gap: 0.6rem; align-items: center; padding: 0.75rem 0.85rem; }
