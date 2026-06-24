@@ -16,6 +16,9 @@ import "prismjs/components/prism-java";
 import "prismjs/components/prism-c";
 import "prismjs/components/prism-cpp";
 import "prismjs/components/prism-csharp";
+// php registers a before-tokenize hook that calls into markup-templating on
+// EVERY highlight — it must be loaded first, or all highlighting throws.
+import "prismjs/components/prism-markup-templating";
 import "prismjs/components/prism-php";
 import "prismjs/components/prism-css";
 import "prismjs/components/prism-scss";

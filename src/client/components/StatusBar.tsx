@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PrMeta, PrStatus, StatusCounts } from "../types.js";
 import { fetchCommitMessage } from "../api.js";
+import { CollapsibleDescription } from "./CollapsibleDescription.js";
 
 const STATUS_LABEL: Record<PrStatus, string> = {
   draft: "Draft",
@@ -23,7 +24,6 @@ export function StatusBar({
   slug: string;
 }) {
   const [commitMsg, setCommitMsg] = useState<string | null>(null);
-  const [descOpen, setDescOpen] = useState(true);
   const reviewed = counts.accepted + counts.rejected;
   const pct = counts.total ? Math.round((reviewed / counts.total) * 100) : 100;
 
@@ -40,18 +40,7 @@ export function StatusBar({
       <div className="sb-meta">
         <code>{pr.branch}</code> ← <code>{pr.baseRef}</code> · round {pr.currentRound}
       </div>
-      {pr.description && (
-        <div className="sb-desc-wrap">
-          <button
-            className="sb-desc-toggle"
-            aria-expanded={descOpen}
-            onClick={() => setDescOpen((o) => !o)}
-          >
-            {descOpen ? "▾" : "▸"} Description
-          </button>
-          {descOpen && <p className="sb-desc">{pr.description}</p>}
-        </div>
-      )}
+      <CollapsibleDescription text={pr.description} />
       {stale && (
         <div className="stale-banner">
           ⚠ Branch advanced since this review was generated — ask the agent to re-run{" "}

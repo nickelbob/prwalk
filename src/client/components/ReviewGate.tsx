@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Manifest } from "../types.js";
 import { LEVELS, riskLabel } from "../risk.js";
+import { CollapsibleDescription } from "./CollapsibleDescription.js";
 
 /**
  * Entry screen: the reviewer picks the risk level they want to review
@@ -38,7 +39,7 @@ export function ReviewGate({
         <code>{manifest.pr.branch}</code> ← <code>{manifest.pr.baseRef}</code> · round{" "}
         {manifest.pr.currentRound} · {live.length} chunks
       </div>
-      {manifest.pr.description && <p className="gate-desc">{manifest.pr.description}</p>}
+      <CollapsibleDescription text={manifest.pr.description} />
 
       <h2>How risky is each chunk?</h2>
       <div className="dist">
