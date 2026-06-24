@@ -1,0 +1,15 @@
+{
+  "tracker": "jira",
+  "jira": {
+    "baseUrl": "https://your-org.atlassian.net",
+    "issueKeyRegex": "[A-Z][A-Z0-9]+-\\d+",
+    "remote": "origin",
+    "reviewer": "<your-atlassian-accountId>",
+    "transitions": {
+      "draft": "In Review",
+      "in_review": "In Review",
+      "changes_requested": "In Progress",
+      "approved": "Done"
+    }
+  }
+}

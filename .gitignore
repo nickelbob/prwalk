@@ -1,7 +1,11 @@
 node_modules/
 *.log
 .DS_Store
+# prwalk's own review data is local/per-user — never commit real configs or
+# review manifests (they can carry tracker URLs, account ids, ticket refs).
+.prwalk/*.json
 .prwalk/*.lock
+!.prwalk/config.example.json
 
 # packed tarballs
 *.tgz

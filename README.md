@@ -109,10 +109,12 @@ audit destination**. No hosted service, and prwalk never holds JIRA credentials.
 - **Sync back** — `prwalk sync` computes a pure **SyncPlan** (status →
   transition + comment + assignee). The orchestrating agent executes it with its
   JIRA tools; a native REST executor is the later headless/CI option.
-- **Configure** — `.prwalk/config.json` (committed, team-shared) holds the issue
-  regex, remote, reviewer, and the status→transition mapping. **Secrets never go
-  here** — the future native executor reads `JIRA_BASE_URL` / `JIRA_EMAIL` /
-  `JIRA_API_TOKEN` from the environment.
+- **Configure** — `.prwalk/config.json` holds the issue regex, remote, reviewer,
+  and the status→transition mapping. Copy [`.prwalk/config.example.json`](.prwalk/config.example.json)
+  to `.prwalk/config.json` and fill it in. Real configs and review manifests are
+  gitignored (they can carry tracker URLs / account ids), so commit them only in
+  private repos if at all. **Secrets never go here** — the native executor reads
+  `JIRA_BASE_URL` / `JIRA_EMAIL` / `JIRA_API_TOKEN` from the environment.
 
 ```jsonc
 // .prwalk/config.json
